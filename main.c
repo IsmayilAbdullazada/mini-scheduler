@@ -1,139 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
-
-#define MAX_EVENTS 100
-
-// Structure to represent a process
-typedef struct workload_item_t {
-    int pid;        //< the event id
-    int ppid;       //< the event parent id
-    size_t ts;      //< start date
-    size_t tf;      //< finish date
-    size_t idle;    //< total time the process has been idle;
-    char *cmd;      //< the binary name
-    int prio;       //< process priority
-} workload_item;
-
-// Structure to represent a priority queue
-struct priority_queue_t {
-    workload_item *heap;
-    size_t capacity;
-    size_t size;
-};
-typedef struct priority_queue_t priority_queue;
-
-// Function to initialize a priority queue
-priority_queue *init_priority_queue(size_t capacity) {
-    priority_queue *pq = (priority_queue *)malloc(sizeof(priority_queue));
-    pq->capacity = capacity;
-    pq->size = 0;
-    pq->heap = (workload_item *)malloc(capacity * sizeof(workload_item));
-    return pq;
-}
-
-// Function to swap two processes
-void swap(workload_item *a, workload_item *b) {
-    workload_item temp = *a;
-    *a = *b;
-    *b = temp;
-}
-
-// Function to compare two processes based on priority and ts
-int is_higher_priority(workload_item a, workload_item b) {
-    if (a.prio > b.prio || (a.prio == b.prio && a.ts < b.ts)) {
-        return 1;
-    }
-    return 0;
-}
-
-
-void heapify_down(priority_queue *pq, size_t index) {
-    size_t left_child = 2 * index + 1;
-    size_t right_child = 2 * index + 2;
-    size_t largest = index;
-
-    if (left_child < pq->size && is_higher_priority(pq->heap[left_child], pq->heap[largest])) {
-        largest = left_child;
-    }
-
-    if (right_child < pq->size && is_higher_priority(pq->heap[right_child], pq->heap[largest])) {
-        largest = right_child;
-    }
-
-    if (largest != index) {
-        swap(&pq->heap[index], &pq->heap[largest]);
-        heapify_down(pq, largest);
-    }
-}
-
-void heapify_up(priority_queue *pq, size_t index) {
-    if (index == 0) {
-        return;
-    }
-
-    size_t parent = (index - 1) / 2;
-    if (is_higher_priority(pq->heap[index], pq->heap[parent])) {
-        swap(&pq->heap[parent], &pq->heap[index]);
-        heapify_up(pq, parent);
-    }
-}
-
-
-// Function to insert a process into the priority queue
-void insert(priority_queue *pq, workload_item process) {
-    if (pq->size == pq->capacity) {
-        printf("Priority queue is full!\n");
-        return;
-    }
-
-    pq->heap[pq->size] = process;
-    pq->size++;
-    heapify_up(pq, pq->size - 1);
-}
-
-// Function to extract the highest priority process from the priority queue
-workload_item extract_max(priority_queue *pq) {
-    if (pq->size == 0) {
-        printf("Priority queue is empty!\n");
-        workload_item null_process = {-1, -1, 0, 0, 0, NULL, -1}; // Return null process
-        return null_process;
-    }
-
-    workload_item max_process = pq->heap[0];
-    pq->heap[0] = pq->heap[pq->size - 1];
-    pq->size--;
-    heapify_down(pq, 0);
-    return max_process;
-}
-
-// Function to check if the priority queue is empty
-int is_empty(priority_queue *pq) {
-    return pq->size == 0;
-}
-
-// Function to free the memory allocated for the priority queue
-void free_priority_queue(priority_queue *pq) {
-    free(pq->heap);
-    free(pq);
-}
+#include "workload.h"
+#include "priority_queue.h"
 
 
 #define CPU_CAPACITY 20
 
 
-
-void display_priority_queue(priority_queue *pq) {
-    for (size_t i = 0; i < pq->size; i++) {
-        printf("(prio: %d, prid: %d), ", pq->heap[i].prio, pq->heap[i].pid);
-    }
-    printf("\n");	
-}
-
-
 priority_queue *running_queue;
 priority_queue *pending_queue;
 
-void set_up_scedulor(workload_item* workloads, size_t num_events){
+void set_up_scheduler(workload_item **workloads, size_t num_events){
     running_queue = init_priority_queue(num_events);
     pending_queue = init_priority_queue(num_events);
 
@@ -156,59 +33,209 @@ void set_up_scedulor(workload_item* workloads, size_t num_events){
     
 }
 
-int is_current_process(int time, workload_item process) {
-    return (process.ts <= time && time <= process.tf);
+int is_possible_process(int time, workload_item *process) {
+    return time <= get_tf(process);
 }
 
-void schedule_processes() {
-    static int current_time = 0;
+int is_current_process(int time, workload_item *process) {
+    return (get_ts(process) <= time && time <= get_tf(process));
+}
+
+/*
+void schedule_processes(int N) {
     static int cpu_capacity = CPU_CAPACITY;
 
-    
-    // add processes to running queue
-    while (!is_empty(pending_queue) ) {
-        workload_item process = extract_max(pending_queue);
+    for (int timestep = 0; timestep <= N; timestep++) {
+        while (!is_empty(pending_queue)) {
+            workload_item *process = extract_max(pending_queue);
 
-        if (is_current_process(current_time, process) &&  (cpu_capacity >= process.prio)) {
-            insert(running_queue, process);
-        } else {
-            insert(pending_queue, process);
+            if (!is_current_process(timestep, process)) {
+                continue;
+            }
+
+            if (process->ts == timestep) {
+                if (process->prio <= cpu_capacity) {
+                    insert(running_queue, process);
+                    cpu_capacity -= process->prio;
+                } else {
+                    insert(pending_queue, process);
+                }
+            } else {
+                if (process->prio <= cpu_capacity) {
+                    insert(running_queue, process);
+                    cpu_capacity -= process->prio;
+                } else {
+                    insert(pending_queue, process);
+                }
+            }
+
+            if (cpu_capacity == 0) {
+                break;
+            }
         }
 
-
-        if (cpu_capacity == 0) {
-            break;
+        while (!is_empty(running_queue)) {
+            workload_item *process = extract_max(running_queue);
+            if (!is_current_process(timestep, process)) {
+                free_workload_item(process);
+            } else {
+                insert(pending_queue, process);
+            }
         }
     }
+}
+*/
 
-    // remove completed processes
+void schedule_processes(int num_processes, int N) {
+  static int cpu_capacity = CPU_CAPACITY;
+  int rq_size = 0;
+  for (int timestep = 0; timestep <= N; timestep++) {
 
+    // Process pending queue
+    for (int index_pq=0; index_pq < num_processes; ++index_pq) {
+        printf("Size of pq: %d\n", get_size(pending_queue));
+      display_priority_queue(pending_queue);
+      workload_item *process = extract_max(pending_queue);
+      display_priority_queue(pending_queue);
+      get_size(pending_queue);
+        // printf("p->ts: %lu,,, p->tf: %lu,,, timestep: %d,,, is current: %d\n", process->ts, process->tf, timestep, is_current_process(timestep, process));
+      if (!is_possible_process(timestep, process)) {
+        continue;
+      }
+    //   printf("I'm the possible one");
+      if (process->prio <= cpu_capacity) {
+          insert(running_queue, process);
+          cpu_capacity -= process->prio;
+          rq_size++;
+        //   printf("Timestep: %d,,, Ts: %lu", timestep, process->ts);
+          // Descheduled
+          if (timestep > process->ts) {
+            process->idle++;
+            process->tf++;
+          }
+      }
+      else {
+          insert(pending_queue, process);
+      }
 
+    //   if (cpu_capacity == 0) {
+    //     break;
+    //   }
+    }
+
+    // Process running queue
+    for (int index_rq=0; index_rq < rq_size; index_rq++) {
+      workload_item *process = extract_max(running_queue);
+      if (!is_current_process(timestep, process)) {
+        // Process finished, free memory
+        delete(running_queue, process);
+        // free_workload_item(process);
+      } else {
+        insert(pending_queue, process);
+      }
+    }
+
+    // Reset CPU capacity for the next round
+    cpu_capacity = CPU_CAPACITY;
+  }
+}
+
+// Function to print a horizontal line segment of a given length
+void print_line(int length) {
+  for (int i = 0; i < length; i++) {
+    printf(".");
+  }
+  printf("\n");
+}
+
+void print_chronogram(workload_item *workload[], size_t workload_size, int C) {
+  int max_tf = 0;  // Maximum planned finish time among all processes
+
+  // Find the maximum planned finish time
+  for (size_t i = 0; i < workload_size; i++) {
+    max_tf = workload[i]->tf > max_tf ? workload[i]->tf : max_tf;
+  }
+
+  // Print the top line
+  printf("|");
+  print_line(max_tf + 1);
+
+  // Print the process names and execution timelines
+  for (size_t i = 0; i < workload_size; i++) {
+    printf("%-8s", workload[i]->cmd);
+    for (int t = 0; t <= max_tf; t++) {
+      if (workload[i]->ts <= t && t < workload[i]->ts + workload[i]->tf) {
+        printf("X");
+      } else {
+        printf(" ");
+      }
+    }
+    size_t actual_finish_time = workload[i]->ts + workload[i]->tf;
+    printf(" (tf=%zu,idle=%zu)\n", workload[i]->tf, workload[i]->idle);
+  }
+}
+
+void clean_up_scheduler() {
+    while (!is_empty(pending_queue)) {
+        workload_item *process = extract_max(pending_queue);
+        free_workload_item(process);
+    }
+
+    while (!is_empty(running_queue)) {
+        workload_item *process = extract_max(running_queue);
+        free_workload_item(process);
+    }
+
+    free_priority_queue(pending_queue);
+    free_priority_queue(running_queue);
 }
 
 int main() {
+    // workload_item workloads[] = {
+    //     {0, -1, 0, 18, 0, "init", 10},
+    //     {1, 0, 1, 16, 0, "bash", 1},
+    //     {2, 0, 3, 16, 0, "bash", 1},
+    //     {3, 1, 4, 6, 0, "find", 2},
+    //     {4, 1, 7, 9, 0, "gcc", 5},
+    //     {5, 4, 8, 9, 0, "ld", 4},
+    //     {6, 2, 10, 13, 0, "ssh", 3},
+    //     {7, 6, 11, 13, 0, "crypt", 5},
+    //     {8, 2, 14, 16, 0, "snake", 4},
+    //     {9, 1, 14, 15, 0, "cat", 5}
+    // };
+    
+    // size_t num_events = sizeof(workloads) / sizeof(workloads[0]);
 
-    workload_item workloads[] = {
-        {0, -1, 0, 18, 0, "init", 10},
-        {1, 0, 1, 16, 0, "bash", 1},
-        {2, 0, 3, 16, 0, "bash", 1},
-        {3, 1, 4, 6, 0, "find", 2},
-        {4, 1, 7, 9, 0, "gcc", 5},
-        {5, 4, 8, 9, 0, "ld", 4},
-        {6, 2, 10, 13, 0, "ssh", 3},
-        {7, 6, 11, 13, 0, "crypt", 5},
-        {8, 2, 14, 16, 0, "snake", 4},
-        {9, 1, 14, 15, 0, "cat", 5}
-    };
+    workload_item **workloads = malloc(MAX_ITEMS * sizeof(workload_item *));
 
+    int num_workloads = get_workload_items("workload_input.txt", workloads, MAX_ITEMS);
 
+    if (num_workloads == -1) {
+        printf("Error: Could not read workload items from file.\n");
+        return 1;
+    }
 
+    /*    
+    for (int i = 0; i < num_workloads; i++) {
+        // Access each workload item through the array of pointers
+        printf("Workload Item %d: pid=%d, ppid=%d, ts=%zu, tf=%zu, idle=%zu, cmd=%s, prio=%d\n",
+               i, get_pid(workloads[i]), get_ppid(workloads[i]), get_ts(workloads[i]),
+               get_tf(workloads[i]), get_idle(workloads[i]), get_cmd(workloads[i]), get_priority(workloads[i]));
+    }
+    */
 
-    size_t num_events = sizeof(workloads) / sizeof(workloads[0]);
-    set_up_scedulor(workloads, num_events);
-
-    printf("Pending Queue size: %d\n ", pending_queue->size);	
+    int N = 20;
+    set_up_scheduler(workloads, num_workloads);
+    schedule_processes(num_workloads, N);
+    print_chronogram(workloads, num_workloads, CPU_CAPACITY);
+    // clean_up_scheduler();
+    /*
+    printf("Pending Queue size: %lu\n ", get_size(pending_queue));	
     display_priority_queue(pending_queue);
     display_priority_queue(running_queue);
+    */
+    free(workloads);
+    free_priority_queue(pending_queue);
+    free_priority_queue(running_queue);
     return 0;
 }

@@ -3,86 +3,43 @@
 #include <string.h>
 #include "workload.h"
 
-#define MAX_CMD_LEN 30
-#define MAX_ITEMS 20
-
-
-struct workload_item_t {
-    int pid;
-    int ppid;
-    size_t ts;
-    size_t tf;
-    size_t idle;
-    char* cmd;
-    int prio;
-};
-
-
-int read_workload(char *file_path) {
-    FILE *fp;
-    char line[100];
-    workload_item *processes = NULL;
-    int num_processes = 0;
-
-    fp = fopen(file_path, "r");
-    if (fp == NULL) {
-        perror("Error opening file");
-        return EXIT_FAILURE;
-    }
-
-    while (fgets(line, sizeof(line), fp)) {
-        workload_item process;
-        char *token;
-        printf("1\n");
-        // Parse the line using strtok
-        token = strtok(line, " \t\n"); // Split based on space, tab, or newline
-        sscanf(token, "%d", &process.pid);
-        printf("2\n");
-        token = strtok(NULL, " \t\n");
-        sscanf(token, "%d", &process.ppid);
-        printf("3\n");
-        token = strtok(NULL, " \t\n");
-        sscanf(token, "%d", &process.prio);
-        printf("4\n");
-        
-        token = strtok(NULL, " \t\n");
-        if (token == NULL) {
-            fprintf(stderr, "Error: Expected command token, but none found.\n");
-        // Handle the error, such as skipping this line or returning an error code
-            continue; // Skip to the next iteration of the loop
-        }
-        strcpy(process.cmd, token);
-        printf("5\n");
-        // Resize the array to accommodate the new element
-        workload_item *temp = realloc(processes, sizeof(workload_item) * (num_processes + 1));
-        if (temp == NULL) {
-            fprintf(stderr, "Memory reallocation failed\n");
-            fclose(fp);
-            free(processes); // Free previously allocated memory
-            return EXIT_FAILURE;
-        }
-        processes = temp;
-
-        // Save the process into the array and increment the count
-        processes[num_processes++] = process;
-    }
-
-    fclose(fp);
-
-    // Print out the information of all processes
-    for (int i = 0; i < num_processes; i++) {
-        printf("PID: %d, PPID: %d, Priority: %d, Name: %s\n",
-            processes[i].pid, processes[i].ppid, processes[i].prio, processes[i].cmd);
-    }
-
-    // Free the dynamically allocated memory
-    free(processes);
-    return EXIT_SUCCESS;
+int get_priority(const workload_item *item) {
+    return item->prio;
 }
 
+void set_priority(workload_item *item, int prio) {
+    item->prio = prio;
+}
 
+int get_pid(const workload_item *item) {
+    return item->pid;
+}
 
-int get_workload_items(char* filename, workload_item** items, size_t max_items) {
+void set_pid(workload_item *item, int pid) {
+    item->pid = pid;
+}
+
+size_t get_tf(const workload_item *item) {
+    return item->tf;
+}
+
+size_t get_ts(const workload_item *item) {
+    return item->ts;
+}
+
+int get_ppid(const workload_item *item) {
+    return item->ppid;
+}
+
+char* get_cmd(const workload_item *item) {
+    return item->cmd;
+}
+
+size_t get_idle(const workload_item *item) {
+    return item->idle;
+}
+
+int get_workload_items(char* filename, workload_item* items[MAX_ITEMS], size_t max_items) {
     FILE* file = fopen(filename, "r");
     if (file == NULL) {
         printf("Could not open file %s\n", filename);
@@ -115,7 +72,6 @@ int get_workload_items(char* filename, workload_item** items, size_t max_items) 
             free(items[i]->cmd); // if the line was not successfully read, free the allocated memory
             free(items[i]);
             printf("Warning: Could not read line %d\n", i + 1);
-            
         }
     }
 
@@ -148,13 +104,12 @@ workload_item* create_workload_item(int pid, int ppid, size_t ts, size_t tf, siz
 
     // Copy the cmd string
     strncpy(item->cmd, cmd, MAX_CMD_LEN);
-
+    free(item->cmd);
+    
     item->prio = prio;
 
     return item;
 }
-
-
 
 int is_equal_workload_item(workload_item* item1, workload_item* item2) {
     if (item1->pid != item2->pid) {
