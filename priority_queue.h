@@ -15,6 +15,10 @@ void free_priority_queue(priority_queue *pq);
 void display_priority_queue(priority_queue *pq);
 
 size_t get_size(const priority_queue *pq);
+workload_item* get_heap(const priority_queue *pq);
+
+workload_item* get_max(const priority_queue *pq);
+workload_item* get_min(const priority_queue *pq);
 
 void delete(priority_queue *pq, workload_item *process);
 

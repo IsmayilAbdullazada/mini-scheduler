@@ -23,6 +23,11 @@ size_t get_tf(const workload_item *item) {
     return item->tf;
 }
 
+void set_tf(workload_item *item, int tf) {
+    item->tf = tf;
+}
+
+
 size_t get_ts(const workload_item *item) {
     return item->ts;
 }
@@ -37,6 +42,10 @@ char* get_cmd(const workload_item *item) {
 
 size_t get_idle(const workload_item *item) {
     return item->idle;
+}
+
+void set_idle(workload_item *item, int idle) {
+    item->idle = idle;
 }
 
 int get_workload_items(char* filename, workload_item* items[MAX_ITEMS], size_t max_items) {
@@ -109,6 +118,29 @@ workload_item* create_workload_item(int pid, int ppid, size_t ts, size_t tf, siz
     item->prio = prio;
 
     return item;
+}
+
+int is_null_process(workload_item* item) {
+    // Define the null process criteria
+    const int null_pid = -1;
+    const int null_ppid = -1;
+    const size_t null_ts = 0;
+    const size_t null_tf = 0;
+    const size_t null_idle = 0;
+    const char* null_cmd = "";
+    const int null_prio = -1;
+
+    // Check if the item matches the null process criteria
+    if (item->pid == null_pid &&
+        item->ppid == null_ppid &&
+        item->ts == null_ts &&
+        item->tf == null_tf &&
+        item->idle == null_idle &&
+        strcmp(item->cmd, null_cmd) == 0 &&
+        item->prio == null_prio) {
+        return 1;
+    }
+    return 0;
 }
 
 int is_equal_workload_item(workload_item* item1, workload_item* item2) {

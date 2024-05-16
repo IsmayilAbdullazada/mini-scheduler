@@ -41,102 +41,77 @@ int is_current_process(int time, workload_item *process) {
     return (get_ts(process) <= time && time <= get_tf(process));
 }
 
-/*
-void schedule_processes(int N) {
-    static int cpu_capacity = CPU_CAPACITY;
-
-    for (int timestep = 0; timestep <= N; timestep++) {
-        while (!is_empty(pending_queue)) {
-            workload_item *process = extract_max(pending_queue);
-
-            if (!is_current_process(timestep, process)) {
-                continue;
-            }
-
-            if (process->ts == timestep) {
-                if (process->prio <= cpu_capacity) {
-                    insert(running_queue, process);
-                    cpu_capacity -= process->prio;
-                } else {
-                    insert(pending_queue, process);
-                }
-            } else {
-                if (process->prio <= cpu_capacity) {
-                    insert(running_queue, process);
-                    cpu_capacity -= process->prio;
-                } else {
-                    insert(pending_queue, process);
-                }
-            }
-
-            if (cpu_capacity == 0) {
-                break;
-            }
-        }
-
-        while (!is_empty(running_queue)) {
-            workload_item *process = extract_max(running_queue);
-            if (!is_current_process(timestep, process)) {
-                free_workload_item(process);
-            } else {
-                insert(pending_queue, process);
-            }
-        }
-    }
+int sum_priorities(priority_queue *pq) {
+  int sum = 0;
+  for (int i = 0; i < get_size(pq); i++) {
+    sum += get_heap(pq)[i].prio;
+  }
+  return sum;
 }
-*/
 
-void schedule_processes(int num_processes, int N) {
-  static int cpu_capacity = CPU_CAPACITY;
-  int rq_size = 0;
+int deschedule() {
+  workload_item *min_process = get_min(running_queue);
+  if (min_process == NULL) return 0;
+  printf("Descheduling Pid %d %s\n", min_process->pid, min_process->cmd);
+  insert(pending_queue, min_process);
+  delete(running_queue, min_process);
+  // printf("Before idle: %lu\n", get_idle(min_process));
+  set_idle(min_process, get_idle(min_process)+1);
+  // printf("After idle: %lu\n", get_idle(min_process));
+  // printf("Before tf: %lu\n", get_tf(min_process));
+  set_tf(min_process, get_tf(min_process)+1);
+  // printf("After tf: %lu\n", get_tf(min_process));
+  return 1;
+}
+
+void schedule_processes(int N) {
   for (int timestep = 0; timestep <= N; timestep++) {
-
+    printf("[t=%d]\n", timestep);
     // Process pending queue
-    for (int index_pq=0; index_pq < num_processes; ++index_pq) {
-        printf("Size of pq: %d\n", get_size(pending_queue));
-      display_priority_queue(pending_queue);
-      workload_item *process = extract_max(pending_queue);
-      display_priority_queue(pending_queue);
-      get_size(pending_queue);
-        // printf("p->ts: %lu,,, p->tf: %lu,,, timestep: %d,,, is current: %d\n", process->ts, process->tf, timestep, is_current_process(timestep, process));
+    for (int index_pq=0; index_pq < get_size(pending_queue); ++index_pq) {
+      workload_item *process = get_heap(pending_queue) + index_pq;
+
       if (!is_possible_process(timestep, process)) {
+        printf("process pid=%d prio=%d ('%s') finished after time t=%d\n", process->pid, process->prio, process->cmd, timestep-1);
+        delete(pending_queue, process);
         continue;
       }
-    //   printf("I'm the possible one");
-      if (process->prio <= cpu_capacity) {
-          insert(running_queue, process);
-          cpu_capacity -= process->prio;
-          rq_size++;
+
+      if (is_current_process(timestep, process) && process->prio <= CPU_CAPACITY) {
+        while ((sum_priorities(running_queue) + process->prio) > 20) {
+          printf("(prio: %d, pid: %d) cannot be added %s\n", process->prio, process->pid, process->cmd); 
+          if (!deschedule()) break;
+        }
+        insert(running_queue, process);
+        printf("schedule pid=%d prio=%d ('%s') ... added to running queue\n", process->pid, process->prio, process->cmd);
+        delete(pending_queue, process);
+        // printf("After descheduling: \n");
+        // printf("Pending queue: \n");
+        // display_priority_queue(pending_queue);
+        // printf("Running queue: \n");
+        // display_priority_queue(running_queue);
+        // printf("\n");
         //   printf("Timestep: %d,,, Ts: %lu", timestep, process->ts);
-          // Descheduled
-          if (timestep > process->ts) {
-            process->idle++;
-            process->tf++;
-          }
       }
-      else {
-          insert(pending_queue, process);
-      }
-
-    //   if (cpu_capacity == 0) {
-    //     break;
-    //   }
     }
 
-    // Process running queue
-    for (int index_rq=0; index_rq < rq_size; index_rq++) {
-      workload_item *process = extract_max(running_queue);
-      if (!is_current_process(timestep, process)) {
-        // Process finished, free memory
+    for (int index_rq=0; index_rq < get_size(running_queue); ++index_rq) {
+      workload_item *process = get_heap(running_queue) + index_rq;
+      if (!is_possible_process(timestep, process)) {
+        printf("process pid=%d prio=%d ('%s') finished after time t=%d\n", process->pid, process->prio, process->cmd, timestep-1);
         delete(running_queue, process);
-        // free_workload_item(process);
-      } else {
-        insert(pending_queue, process);
+        continue;
       }
     }
 
-    // Reset CPU capacity for the next round
-    cpu_capacity = CPU_CAPACITY;
+    printf("CPU occupation: CPU[0]=%d\n", sum_priorities(running_queue));
+    printf("running: [");
+    display_priority_queue(running_queue);
+    printf(" ]\n");
+    printf("pending: [");
+    display_priority_queue(pending_queue);
+    printf(" ]\n\n");
+
   }
 }
 
@@ -226,7 +201,7 @@ int main() {
 
     int N = 20;
     set_up_scheduler(workloads, num_workloads);
-    schedule_processes(num_workloads, N);
+    schedule_processes(N);
     print_chronogram(workloads, num_workloads, CPU_CAPACITY);
     // clean_up_scheduler();
     /*
