@@ -3,6 +3,7 @@
 typedef struct priority_queue_t priority_queue;
 
 priority_queue *init_priority_queue(size_t capacity);
+priority_queue* build_priority_queue(workload_item **workloads, size_t num_events);
 
 void insert(priority_queue *pq, workload_item *process);
 

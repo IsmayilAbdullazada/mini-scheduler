@@ -3,34 +3,27 @@
 #include "workload.h"
 #include "priority_queue.h"
 
-
 #define CPU_CAPACITY 20
-
 
 priority_queue *running_queue;
 priority_queue *pending_queue;
 
 void set_up_scheduler(workload_item **workloads, size_t num_events){
-    running_queue = init_priority_queue(num_events);
-    pending_queue = init_priority_queue(num_events);
-
-    if (running_queue == NULL || pending_queue == NULL) {
-        printf("Error: Could not allocate memory for the priority queues\n");
-        exit(1);
-    }
-
     if (workloads == NULL) {
         printf("Error: No workloads provided\n");
         exit(1);
     }
-
-    
-    for (size_t i = 0; i < num_events; i++) {
-   
-        insert(pending_queue, workloads[i]);
-        
+    running_queue = init_priority_queue(num_events);
+    // pending_queue = init_priority_queue(num_events);
+    pending_queue = build_priority_queue(workloads, num_events);
+    if (running_queue == NULL || pending_queue == NULL) {
+        printf("Error: Could not allocate memory for the priority queues\n");
+        exit(1);
     }
     
+    // for (size_t i = 0; i < num_events; i++) {
+    //     insert(pending_queue, workloads[i]);
+    // }
 }
 
 int is_possible_process(int time, workload_item *process) {
@@ -49,28 +42,44 @@ int sum_priorities(priority_queue *pq) {
   return sum;
 }
 
-int deschedule() {
-  workload_item *min_process = get_min(running_queue);
-  if (min_process == NULL) return 0;
-  printf("Descheduling Pid %d %s\n", min_process->pid, min_process->cmd);
-  insert(pending_queue, min_process);
-  delete(running_queue, min_process);
-  // printf("Before idle: %lu\n", get_idle(min_process));
-  set_idle(min_process, get_idle(min_process)+1);
-  // printf("After idle: %lu\n", get_idle(min_process));
-  // printf("Before tf: %lu\n", get_tf(min_process));
-  set_tf(min_process, get_tf(min_process)+1);
-  // printf("After tf: %lu\n", get_tf(min_process));
+int deschedule(workload_item *process) {
+  if (process == NULL) return 0;
+  // printf("Descheduling Pid %d %s\n", process->pid, process->cmd);
+  insert(pending_queue, process);
+  delete(running_queue, process);
+  printf("Before idle: %lu\n", get_idle(process));
+  set_idle(process, get_idle(process)+1);
+  printf("After idle: %lu\n", get_idle(process));
+  // printf("Before tf: %lu\n", get_tf(process));
+  set_tf(process, get_tf(process)+1);
+  // printf("After tf: %lu\n", get_tf(process));
   return 1;
 }
 
 void schedule_processes(int N) {
   for (int timestep = 0; timestep <= N; timestep++) {
     printf("[t=%d]\n", timestep);
-    // Process pending queue
-    for (int index_pq=0; index_pq < get_size(pending_queue); ++index_pq) {
-      workload_item *process = get_heap(pending_queue) + index_pq;
 
+    // Process running queue
+    for (int index_rq=0; index_rq < get_size(running_queue); ++index_rq) {
+      workload_item *process = get_heap(running_queue) + index_rq;
+      // printf("index: %d\n", index_rq);
+      // display_priority_queue(running_queue);
+      // printf("\nrq size: %lu\n", get_size(running_queue));
+      // printf("process pid=%d prio=%d tf=%lu ('%s')\n", process->pid, process->prio, process->tf, process->cmd);
+      if (!is_possible_process(timestep, process)) {
+        printf("process pid=%d prio=%d ('%s') finished after time t=%d\n", process->pid, process->prio, process->cmd, timestep-1);
+        delete(running_queue, process);
+        printf("CPU occupation: CPU[0]=%d\n", sum_priorities(running_queue));
+        index_rq = 0;
+      }
+    }
+
+    // Process pending queue
+    int index_pq = 0;
+    while (index_pq < get_size(pending_queue)) {
+      workload_item *process = get_heap(pending_queue) + index_pq;
+      index_pq++;
       if (!is_possible_process(timestep, process)) {
         printf("process pid=%d prio=%d ('%s') finished after time t=%d\n", process->pid, process->prio, process->cmd, timestep-1);
         delete(pending_queue, process);
@@ -79,12 +88,27 @@ void schedule_processes(int N) {
 
       if (is_current_process(timestep, process) && process->prio <= CPU_CAPACITY) {
         while ((sum_priorities(running_queue) + process->prio) > 20) {
-          printf("(prio: %d, pid: %d) cannot be added %s\n", process->prio, process->pid, process->cmd); 
-          if (!deschedule()) break;
+          workload_item *min_process = get_min(running_queue);
+          if (process->prio <= min_process->prio){
+            printf("schedule pid=%d prio=%d ('%s') ... can't fit. Pick process to put asleep: None, as min prio: pid=%d prio=%d ('%s') has greater priority\n", process->pid, process->prio, process->cmd, min_process->pid, min_process->prio, min_process->cmd);
+            printf("CPU occupation: CPU[0]=%d\n", sum_priorities(running_queue));
+            break;
+          }
+          printf("schedule pid=%d prio=%d ('%s') ... can't fit. Pick process to put asleep: pid=%d prio=%d ('%s')\n", process->pid, process->prio, process->cmd, min_process->pid, min_process->prio, min_process->cmd); 
+          deschedule(min_process);
+          printf("CPU occupation: CPU[0]=%d\n", sum_priorities(running_queue));
         }
-        insert(running_queue, process);
-        printf("schedule pid=%d prio=%d ('%s') ... added to running queue\n", process->pid, process->prio, process->cmd);
-        delete(pending_queue, process);
+        // printf("index of process: %d\n", index_pq);
+        // display_priority_queue(pending_queue);
+        // printf("\n");
+        if (sum_priorities(running_queue) + process->prio <= 20) {
+          insert(running_queue, process);
+          printf("schedule pid=%d prio=%d ('%s') ... added to running queue\n", process->pid, process->prio, process->cmd);
+          printf("CPU occupation: CPU[0]=%d\n", sum_priorities(running_queue));
+          delete(pending_queue, process);
+          index_pq = 0;
+        }
+        // printf("index of process: %d\n", index_pq);
         // printf("After descheduling: \n");
         // printf("Pending queue: \n");
         // display_priority_queue(pending_queue);
@@ -95,23 +119,12 @@ void schedule_processes(int N) {
       }
     }
 
-    for (int index_rq=0; index_rq < get_size(running_queue); ++index_rq) {
-      workload_item *process = get_heap(running_queue) + index_rq;
-      if (!is_possible_process(timestep, process)) {
-        printf("process pid=%d prio=%d ('%s') finished after time t=%d\n", process->pid, process->prio, process->cmd, timestep-1);
-        delete(running_queue, process);
-        continue;
-      }
-    }
-
-    printf("CPU occupation: CPU[0]=%d\n", sum_priorities(running_queue));
     printf("running: [");
     display_priority_queue(running_queue);
     printf(" ]\n");
     printf("pending: [");
     display_priority_queue(pending_queue);
-    printf(" ]\n\n");
-
+    printf("]\n\n");
   }
 }
 
@@ -123,12 +136,12 @@ void print_line(int length) {
   printf("\n");
 }
 
-void print_chronogram(workload_item *workload[], size_t workload_size, int C) {
+void print_chronogram(workload_item **workloads, size_t workload_size, int C) {
   int max_tf = 0;  // Maximum planned finish time among all processes
 
   // Find the maximum planned finish time
   for (size_t i = 0; i < workload_size; i++) {
-    max_tf = workload[i]->tf > max_tf ? workload[i]->tf : max_tf;
+    max_tf = workloads[i]->tf > max_tf ? workloads[i]->tf : max_tf;
   }
 
   // Print the top line
@@ -137,16 +150,15 @@ void print_chronogram(workload_item *workload[], size_t workload_size, int C) {
 
   // Print the process names and execution timelines
   for (size_t i = 0; i < workload_size; i++) {
-    printf("%-8s", workload[i]->cmd);
+    printf("%-8s", workloads[i]->cmd);
     for (int t = 0; t <= max_tf; t++) {
-      if (workload[i]->ts <= t && t < workload[i]->ts + workload[i]->tf) {
+      if (workloads[i]->ts <= t && t < workloads[i]->ts + workloads[i]->tf) {
         printf("X");
       } else {
         printf(" ");
       }
     }
-    size_t actual_finish_time = workload[i]->ts + workload[i]->tf;
-    printf(" (tf=%zu,idle=%zu)\n", workload[i]->tf, workload[i]->idle);
+    printf(" (tf=%lu,idle=%lu)\n", workloads[i]->tf, workloads[i]->idle);
   }
 }
 

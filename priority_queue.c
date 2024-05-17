@@ -19,7 +19,7 @@ size_t get_size(const priority_queue *pq) {
 }
 
 // Function to initialize a priority queue
-priority_queue *init_priority_queue(size_t capacity) {
+priority_queue* init_priority_queue(size_t capacity) {
     priority_queue *pq = (priority_queue *)malloc(sizeof(priority_queue));
     pq->capacity = capacity;
     pq->size = 0;
@@ -60,12 +60,24 @@ void heapify_up(priority_queue *pq, size_t index) {
 
 // Function to compare two processes based on priority and ts
 int is_higher_priority(workload_item a, workload_item b) {
-    if (a.prio > b.prio || (a.prio == b.prio && a.ts < b.ts)) {
+    if (a.prio > b.prio || (a.prio == b.prio && a.ts >= b.ts)) {
         return 1;
     }
     return 0;
 }
 
+priority_queue* build_priority_queue(workload_item **workloads, size_t num_events) {
+    priority_queue *pq = init_priority_queue(num_events);
+    int i;
+	for (i = 0; i < num_events; i++) {
+		pq->heap[i] = *workloads[i];
+	}
+	pq->size = i;
+	for (i = (pq->size - 1) / 2; i>=0; i--) {
+		heapify_down(pq, i);
+	}
+	return pq;
+}
 
 // Function to insert a process into the priority queue
 void insert(priority_queue *pq, workload_item *process) {
@@ -80,17 +92,12 @@ void insert(priority_queue *pq, workload_item *process) {
 }
 
 void delete(priority_queue *pq, workload_item *process) {
-//   printf("Before deletion: \n");
-//   display_priority_queue(pq);
   size_t i;
   for (i = 0; i < pq->size; i++) {
-    // printf("cmd: %s pq->heap[%lu]: %d process->pid: %d\n", pq->heap[i].cmd, i, pq->heap[i].pid, process->pid);
     if (pq->heap[i].pid == process->pid) {
-    // printf("Found\n");
       break;
     }
   }
-//   printf("i: %lu size of queue: %lu\n", i, pq->size);
 //   if (i >= pq->size) {
 //     printf("Element with pid %d not found in the queue\n", process->pid);
 //     return;
@@ -100,8 +107,6 @@ void delete(priority_queue *pq, workload_item *process) {
   pq->size--;
   heapify_down(pq, i);
 //   free_workload_item(process);
-    // printf("After deletion: \n");
-    // display_priority_queue(pq);
 }
 
 // Function to extract the highest priority process from the priority queue
@@ -142,7 +147,7 @@ workload_item* get_min(const priority_queue *pq) {
         int current_priority = get_priority(&(pq->heap[i]));
         unsigned long current_ts = get_ts(&(pq->heap[i]));
         // printf("curr_prio: %d, min_prio: %d\n", current_priority, min_priority);
-        printf("curr_ts: %lu\n", get_ts(&(pq->heap[i])));
+        // printf("curr_ts: %lu\n", get_ts(&(pq->heap[i])));
 
         if (current_priority < min_priority || 
             (current_priority == min_priority && current_ts > get_ts(min_process))) {
@@ -161,13 +166,15 @@ int is_empty(priority_queue *pq) {
 
 // Function to free the memory allocated for the priority queue
 void free_priority_queue(priority_queue *pq) {
-    free(pq->heap);
-    free(pq);
+    if (pq) {
+        free(pq->heap);
+        free(pq);
+    }
 }
 
 void display_priority_queue(priority_queue *pq) {
     for (size_t i = 0; i < pq->size; i++) {
-        printf("(prio: %d, pid: %d), ", pq->heap[i].prio, pq->heap[i].pid);
+        printf("(prio: %d, pid: %d) ", pq->heap[i].prio, pq->heap[i].pid);
     }
 }
 
