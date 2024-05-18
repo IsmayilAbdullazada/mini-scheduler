@@ -3,11 +3,8 @@ CFLAGS=-I.
 
 all: test_workload test_priority_queue main
 
-
-
 scheduler.o: scheduler.c scheduler.h
 	$(CC) -c scheduler.c
-
 
 workload.o: workload.c workload.h
 	$(CC) -c workload.c
@@ -25,12 +22,12 @@ main.o: main.c workload.h priority_queue.h scheduler.h
 	$(CC) -c main.c
 
 main: main.o workload.o priority_queue.o scheduler.o
-	$(CC) -o main main.o workload.o priority_queue.o scheduler.o
+	$(CC) -o sched main.o workload.o priority_queue.o scheduler.o
 
 main_valgrind: main
-	valgrind --leak-check=full --show-leak-kinds=all ./main
+	valgrind --leak-check=full --show-leak-kinds=all ./sched
 
-testw: test_workload
+test_workload_valgrind: test_workload
 	valgrind --leak-check=full --show-leak-kinds=all ./test_workload
 
 test_priority_queue.o: test_priority_queue.c priority_queue.h workload.h
@@ -39,8 +36,8 @@ test_priority_queue.o: test_priority_queue.c priority_queue.h workload.h
 test_priority_queue: test_priority_queue.o workload.o priority_queue.o
 	$(CC) -o test_priority_queue test_priority_queue.o workload.o priority_queue.o
 
-testpq: test_priority_queue
+test_priority_queue_valgrind: test_priority_queue
 	valgrind --leak-check=full --show-leak-kinds=all ./test_priority_queue
 
 clean:
-	rm -f *.o workload test_workload main test_priority_queue
+	rm -f *.o workload test_workload sched test_priority_queue trace.txt

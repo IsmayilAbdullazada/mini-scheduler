@@ -37,7 +37,6 @@ void set_tf(workload_item *item, int tf) {
     item->tf = tf;
 }
 
-
 size_t get_ts(const workload_item *item) {
     return item->ts;
 }
@@ -88,7 +87,7 @@ int get_workload_items(char* filename, workload_item* items[MAX_ITEMS], size_t m
         if (result == 7) { // all fields were successfully read
             i++;
         } else {
-            free(items[i]->cmd); // if the line was not successfully read, free the allocated memory
+            free(items[i]->cmd);
             free(items[i]);
             printf("Warning: Could not read line %d\n", i + 1);
         }
@@ -99,58 +98,31 @@ int get_workload_items(char* filename, workload_item* items[MAX_ITEMS], size_t m
 }
 
 workload_item* create_workload_item(int pid, int ppid, size_t ts, size_t tf, size_t idle, char* cmd, int prio) {
-    // Allocate memory for a new workload_item
     workload_item* item = malloc(sizeof(workload_item));
     if (item == NULL) {
         printf("Memory allocation for workload_item failed\n");
         return NULL;
     }
 
-    // Set the attributes
     item->pid = pid;
     item->ppid = ppid;
     item->ts = ts;
     item->tf = tf;
     item->idle = idle;
 
-    // Allocate memory for cmd
     item->cmd = malloc(MAX_CMD_LEN * sizeof(char));
     if (item->cmd == NULL) {
         printf("Memory allocation for cmd failed\n");
-        free(item); // Free the memory allocated for the workload_item
+        free(item);
         return NULL;
     }
 
-    // Copy the cmd string
     strncpy(item->cmd, cmd, MAX_CMD_LEN);
     free(item->cmd);
     
     item->prio = prio;
 
     return item;
-}
-
-int is_null_process(workload_item* item) {
-    // Define the null process criteria
-    const int null_pid = -1;
-    const int null_ppid = -1;
-    const size_t null_ts = 0;
-    const size_t null_tf = 0;
-    const size_t null_idle = 0;
-    const char* null_cmd = "";
-    const int null_prio = -1;
-
-    // Check if the item matches the null process criteria
-    if (item->pid == null_pid &&
-        item->ppid == null_ppid &&
-        item->ts == null_ts &&
-        item->tf == null_tf &&
-        item->idle == null_idle &&
-        strcmp(item->cmd, null_cmd) == 0 &&
-        item->prio == null_prio) {
-        return 1;
-    }
-    return 0;
 }
 
 int is_equal_workload_item(workload_item* item1, workload_item* item2) {
@@ -175,7 +147,7 @@ int is_equal_workload_item(workload_item* item1, workload_item* item2) {
     if (item1->prio != item2->prio) {
         return 0;
     }
-    return 1; // The items are equal
+    return 1;
 }
 
 void free_workload_item(workload_item* item) {

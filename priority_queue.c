@@ -3,7 +3,6 @@
 #include "workload.h"
 #include "priority_queue.h"
 
-// Structure to represent a priority queue
 struct priority_queue_t {
     workload_item** heap;
     size_t capacity;
@@ -18,7 +17,6 @@ size_t get_size(const priority_queue *pq) {
     return pq->size;
 }
 
-// Function to initialize a priority queue
 priority_queue* init_priority_queue(size_t capacity) {
     priority_queue *pq = (priority_queue *)malloc(sizeof(priority_queue));
     pq->capacity = capacity;
@@ -58,7 +56,6 @@ void heapify_up(priority_queue *pq, size_t index) {
     }
 }
 
-// Function to compare two processes based on priority and ts
 int is_higher_priority(workload_item* a, workload_item* b) {
     if (get_ts(a) <= get_ts(b) || (get_ts(a) == get_ts(b) && get_priority(a) >= get_priority(b))) {
         return 1;
@@ -79,7 +76,6 @@ priority_queue* build_priority_queue(workload_item **workloads, size_t num_event
 	return pq;
 }
 
-// Function to insert a process into the priority queue
 void insert(priority_queue *pq, workload_item *process) {
     if (pq->size == pq->capacity) {
         printf("Priority queue is full!\n");
@@ -92,24 +88,16 @@ void insert(priority_queue *pq, workload_item *process) {
 }
 
 void delete(priority_queue *pq, workload_item *process) {
-  size_t i;
-  for (i = 0; i < pq->size; i++) {
-    if (get_pid(pq->heap[i]) == get_pid(process)) {
+  size_t index;
+  for (index = 0; index < pq->size; index++) {
+    if (get_pid(pq->heap[index]) == get_pid(process))
       break;
-    }
   }
-//   if (i >= pq->size) {
-//     printf("Element with pid %d not found in the queue\n", process->pid);
-//     return;
-//   }
-//   swap(&pq->heap[i], &pq->heap[pq->size - 1]);
-  pq->heap[i] = pq->heap[pq->size - 1];
+  pq->heap[index] = pq->heap[pq->size - 1];
   pq->size--;
-  heapify_down(pq, i);
-//   free_workload_item(process);
+  heapify_down(pq, index);
 }
 
-// Function to extract the highest priority process from the priority queue
 workload_item* extract_max(priority_queue *pq) {
     if (pq->size == 0) {
         printf("Priority queue is empty!\n");
@@ -124,46 +112,40 @@ workload_item* extract_max(priority_queue *pq) {
     return max_process;
 }
 
-// Function to get the highest priority process from the priority queue without removing it
 workload_item* get_max(const priority_queue *pq) {
     if (pq->size == 0) {
         printf("Priority queue is empty!\n");
-        return NULL; // Return NULL if the queue is empty
+        return NULL;
     }
 
-    return pq->heap[0]; // Return a pointer to the maximum element in the heap
+    return pq->heap[0];
 }
 
 workload_item* get_min(const priority_queue *pq) {
     if (pq->size == 0) {
-        return NULL; // Return NULL if the queue is empty
+        return NULL;
     }
 
     workload_item *min_process = NULL;
     int min_priority = INT_MAX;
 
-    // Leaf nodes start from index n/2 to n-1
+
     for (size_t i = pq->size / 2; i < pq->size; ++i) {
         int current_priority = get_priority(pq->heap[i]);
         unsigned long current_ts = get_ts(pq->heap[i]);
-        // printf("curr_prio: %d, min_prio: %d\n", current_priority, min_priority);
-        // printf("curr_ts: %lu\n", get_ts(&(pq->heap[i])));
 
-        if (current_priority < min_priority){ //|| (current_priority == min_priority && current_ts > get_ts(min_process))) {
+        if (current_priority < min_priority){
             min_priority = current_priority;
             min_process = pq->heap[i];
         }
     }
-    // printf("Min priority: %d\n", min_priority);
     return min_process;
 }
 
-// Function to check if the priority queue is empty
 int is_empty(priority_queue *pq) {
     return pq->size == 0;
 }
 
-// Function to free the memory allocated for the priority queue
 void free_priority_queue(priority_queue *pq) {
     if (pq) {
         if (pq->heap) {
@@ -173,10 +155,29 @@ void free_priority_queue(priority_queue *pq) {
     }
 }
 
-void display_priority_queue(priority_queue *pq) {
+char* display_priority_queue(priority_queue *pq, int print) {
+    size_t total_size = 3; // For the opening "[" and closing "]", and null terminator
     for (size_t i = 0; i < pq->size; i++) {
-        printf("(%d, %d) ", get_priority(pq->heap[i]), get_priority(pq->heap[i]));
+        total_size += snprintf(NULL, 0, "(%d, %d) ", get_priority(pq->heap[i]), get_pid(pq->heap[i]));
     }
+
+    char *result = malloc(total_size);
+    if (result == NULL) {
+        printf("Error: Could not allocate memory for the queue display string\n");
+        exit(1);
+    }
+
+    char *ptr = result;
+    ptr += sprintf(ptr, "[");
+    for (size_t i = 0; i < pq->size; i++) {
+        ptr += sprintf(ptr, "(%d, %d) ", get_priority(pq->heap[i]), get_pid(pq->heap[i]));
+    }
+    sprintf(ptr, "]");
+
+    if (print)
+        printf("%s\n", result);
+
+    return result;
 }
 
 void swap(workload_item **a, workload_item **b) {

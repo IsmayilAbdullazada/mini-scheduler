@@ -3,11 +3,8 @@
 #include <stdlib.h>
 
 void test_get_workload_items(void) {
-
     workload_item** expected_workloads;
     expected_workloads = malloc(10 * sizeof(workload_item*));
-
-
 
     // 0 -1    0 18  0 init  10 
     // 1  0    1 16  0 bash   1 
