@@ -3,15 +3,8 @@
 #define MAX_CMD_LEN 30
 #define MAX_ITEMS 20
 
-struct workload_item_t {
-    int pid;
-    int ppid;
-    size_t ts;
-    size_t tf;
-    size_t idle;
-    char* cmd;
-    int prio;
-};
+
+
 
 typedef struct workload_item_t workload_item;
 
@@ -21,11 +14,11 @@ workload_item* create_workload_item(int pid, int ppid, size_t ts, size_t tf, siz
 
 int is_equal_workload_item(workload_item* item1, workload_item* item2);
 
-void free_workload_item(workload_item* item);
+void free_workload_item(workload_item *item);
 
 int is_null_process(workload_item *item);
 
-int is_higher_priority(workload_item a, workload_item b);
+int is_higher_priority(workload_item* a, workload_item* b);
 
 int get_priority(const workload_item *item);
 void set_priority(workload_item *item, int prio);

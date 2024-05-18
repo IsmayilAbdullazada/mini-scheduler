@@ -3,6 +3,16 @@
 #include <string.h>
 #include "workload.h"
 
+struct workload_item_t {
+    int pid;
+    int ppid;
+    size_t ts;
+    size_t tf;
+    size_t idle;
+    char* cmd;
+    int prio;
+};
+
 int get_priority(const workload_item *item) {
     return item->prio;
 }
@@ -172,7 +182,9 @@ void free_workload_item(workload_item* item) {
     if (item != NULL) {
         if (item->cmd != NULL) {
             free(item->cmd);
+            item->cmd = NULL;
         }
         free(item);
+        item = NULL;
     }
 }

@@ -5,12 +5,12 @@
 
 // Structure to represent a priority queue
 struct priority_queue_t {
-    workload_item *heap;
+    workload_item** heap;
     size_t capacity;
     size_t size;
 };
 
-workload_item* get_heap(const priority_queue *pq) {
+workload_item** get_heap(const priority_queue *pq) {
     return pq->heap;
 }
 
@@ -23,7 +23,7 @@ priority_queue* init_priority_queue(size_t capacity) {
     priority_queue *pq = (priority_queue *)malloc(sizeof(priority_queue));
     pq->capacity = capacity;
     pq->size = 0;
-    pq->heap = (workload_item *)malloc(capacity * sizeof(workload_item));
+    pq->heap = (workload_item **)malloc(capacity * sizeof(workload_item*));
     return pq;
 }
 
@@ -59,8 +59,8 @@ void heapify_up(priority_queue *pq, size_t index) {
 }
 
 // Function to compare two processes based on priority and ts
-int is_higher_priority(workload_item a, workload_item b) {
-    if (a.prio > b.prio || (a.prio == b.prio && a.ts >= b.ts)) {
+int is_higher_priority(workload_item* a, workload_item* b) {
+    if (get_ts(a) <= get_ts(b) || (get_ts(a) == get_ts(b) && get_priority(a) >= get_priority(b))) {
         return 1;
     }
     return 0;
@@ -70,7 +70,7 @@ priority_queue* build_priority_queue(workload_item **workloads, size_t num_event
     priority_queue *pq = init_priority_queue(num_events);
     int i;
 	for (i = 0; i < num_events; i++) {
-		pq->heap[i] = *workloads[i];
+		pq->heap[i] = workloads[i];
 	}
 	pq->size = i;
 	for (i = (pq->size - 1) / 2; i>=0; i--) {
@@ -86,7 +86,7 @@ void insert(priority_queue *pq, workload_item *process) {
         return;
     }
 
-    pq->heap[pq->size] = *process;
+    pq->heap[pq->size] = process;
     pq->size++;
     heapify_up(pq, pq->size - 1);
 }
@@ -94,7 +94,7 @@ void insert(priority_queue *pq, workload_item *process) {
 void delete(priority_queue *pq, workload_item *process) {
   size_t i;
   for (i = 0; i < pq->size; i++) {
-    if (pq->heap[i].pid == process->pid) {
+    if (get_pid(pq->heap[i]) == get_pid(process)) {
       break;
     }
   }
@@ -117,7 +117,7 @@ workload_item* extract_max(priority_queue *pq) {
         return null_process;
     }
 
-    workload_item *max_process = &(pq->heap[0]);
+    workload_item *max_process = pq->heap[0];
     pq->heap[0] = pq->heap[pq->size - 1];
     pq->size--;
     heapify_down(pq, 0);
@@ -131,7 +131,7 @@ workload_item* get_max(const priority_queue *pq) {
         return NULL; // Return NULL if the queue is empty
     }
 
-    return &(pq->heap[0]); // Return a pointer to the maximum element in the heap
+    return pq->heap[0]; // Return a pointer to the maximum element in the heap
 }
 
 workload_item* get_min(const priority_queue *pq) {
@@ -144,15 +144,14 @@ workload_item* get_min(const priority_queue *pq) {
 
     // Leaf nodes start from index n/2 to n-1
     for (size_t i = pq->size / 2; i < pq->size; ++i) {
-        int current_priority = get_priority(&(pq->heap[i]));
-        unsigned long current_ts = get_ts(&(pq->heap[i]));
+        int current_priority = get_priority(pq->heap[i]);
+        unsigned long current_ts = get_ts(pq->heap[i]);
         // printf("curr_prio: %d, min_prio: %d\n", current_priority, min_priority);
         // printf("curr_ts: %lu\n", get_ts(&(pq->heap[i])));
 
-        if (current_priority < min_priority || 
-            (current_priority == min_priority && current_ts > get_ts(min_process))) {
+        if (current_priority < min_priority){ //|| (current_priority == min_priority && current_ts > get_ts(min_process))) {
             min_priority = current_priority;
-            min_process = &(pq->heap[i]);
+            min_process = pq->heap[i];
         }
     }
     // printf("Min priority: %d\n", min_priority);
@@ -167,19 +166,21 @@ int is_empty(priority_queue *pq) {
 // Function to free the memory allocated for the priority queue
 void free_priority_queue(priority_queue *pq) {
     if (pq) {
-        free(pq->heap);
+        if (pq->heap) {
+            free(pq->heap);
+        }
         free(pq);
     }
 }
 
 void display_priority_queue(priority_queue *pq) {
     for (size_t i = 0; i < pq->size; i++) {
-        printf("(prio: %d, pid: %d) ", pq->heap[i].prio, pq->heap[i].pid);
+        printf("(%d, %d) ", get_priority(pq->heap[i]), get_priority(pq->heap[i]));
     }
 }
 
-void swap(workload_item *a, workload_item *b) {
-    workload_item temp = *a;
+void swap(workload_item **a, workload_item **b) {
+    workload_item* temp = *a;
     *a = *b;
     *b = temp;
 }
