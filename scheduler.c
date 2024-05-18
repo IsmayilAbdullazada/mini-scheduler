@@ -82,8 +82,7 @@ void schedule_processes(scheduler* s, int N) {
 
     int index_rq = 0;
     while (index_rq < get_size(s->running_queue)) {
-      workload_item *process = get_heap(s->running_queue)[index_rq];
-      index_rq++;
+      workload_item *process = get_heap(s->running_queue)[index_rq++];
       if (!is_possible_process(timestep, process)) {
         fprintf(trace_file, "process pid=%d prio=%d ('%s') finished after time t=%d\n", get_pid(process), get_priority(process), get_cmd(process), timestep-1);
         delete(s->running_queue, process);
@@ -95,8 +94,7 @@ void schedule_processes(scheduler* s, int N) {
     // Process pending queue
     int index_pq = 0;
     while (index_pq < get_size(s->pending_queue)) {
-      workload_item *process = get_heap(s->pending_queue)[index_pq];
-      index_pq++;
+      workload_item *process = get_heap(s->pending_queue)[index_pq++];
       int is_in_pq = 1;
       int is_pq_change = 0;
 
