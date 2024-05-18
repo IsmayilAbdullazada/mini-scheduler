@@ -3,6 +3,12 @@ CFLAGS=-I.
 
 all: test_workload test_priority_queue main
 
+
+
+scheduler.o: scheduler.c scheduler.h
+	$(CC) -c scheduler.c
+
+
 workload.o: workload.c workload.h
 	$(CC) -c workload.c
 
@@ -15,11 +21,11 @@ test_workload.o: test_workload.c workload.h
 test_workload: test_workload.o workload.o
 	$(CC) -o test_workload test_workload.o workload.o
 
-main.o: main.c workload.h priority_queue.h
+main.o: main.c workload.h priority_queue.h scheduler.h
 	$(CC) -c main.c
 
-main: main.o workload.o priority_queue.o
-	$(CC) -o main main.o workload.o priority_queue.o
+main: main.o workload.o priority_queue.o scheduler.o
+	$(CC) -o main main.o workload.o priority_queue.o scheduler.o
 
 main_valgrind: main
 	valgrind --leak-check=full --show-leak-kinds=all ./main
