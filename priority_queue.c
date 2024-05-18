@@ -130,9 +130,9 @@ workload_item* get_min(const priority_queue *pq) {
     int min_priority = INT_MAX;
 
 
-    for (size_t i = pq->size / 2; i < pq->size; ++i) {
+    for (size_t i = 1; i < pq->size; ++i) {
         int current_priority = get_priority(pq->heap[i]);
-        unsigned long current_ts = get_ts(pq->heap[i]);
+        size_t current_ts = get_ts(pq->heap[i]);
 
         if (current_priority < min_priority){
             min_priority = current_priority;
