@@ -144,21 +144,21 @@ void schedule_processes(scheduler* s, int N) {
           if (get_priority(pending_process) <= get_priority(min_running_process)){
             // If the process cannot fit due to priority, write to the trace and skip scheduling it
             fprintf(trace_file, "schedule pid=%d prio=%d ('%s') ... can't fit. Pick process to put asleep: None, as min prio: pid=%d prio=%d ('%s') has greater priority\n", get_pid(pending_process), get_priority(pending_process), get_cmd(pending_process), get_pid(min_running_process), get_priority(min_running_process), get_cmd(min_running_process));
-            fprintf(trace_file, "CPU occupation: CPU[0]=%d\n", min_running_process);
+            fprintf(trace_file, "CPU occupation: CPU[0]=%d\n", s->cpu_occupation);
             break;
           }
           // If another process with lower priority can be put to sleep, deschedule it
           fprintf(trace_file, "schedule pid=%d prio=%d ('%s') ... can't fit. Pick process to put asleep: pid=%d prio=%d ('%s')\n", get_pid(pending_process), get_priority(pending_process), get_cmd(pending_process), get_pid(min_running_process), get_priority(min_running_process), get_cmd(min_running_process));
           deschedule(s, min_running_process, timestep);
           pq_changed = true;
-          fprintf(trace_file, "CPU occupation: CPU[0]=%d\n", min_running_process);
+          fprintf(trace_file, "CPU occupation: CPU[0]=%d\n", s->cpu_occupation);
         }
         // If the process can fit, schedule it and update the trace
         if (s->cpu_occupation + get_priority(pending_process) <= s->cpu_capacity) {
           schedule(s, pending_process, timestep);
           in_pq = false;
           fprintf(trace_file, "schedule pid=%d prio=%d ('%s') ... added to running queue\n", get_pid(pending_process), get_priority(pending_process), get_cmd(pending_process));
-          fprintf(trace_file, "CPU occupation: CPU[0]=%d\n", min_running_process);
+          fprintf(trace_file, "CPU occupation: CPU[0]=%d\n", s->cpu_occupation);
           pq_changed = true;
         }
         // If the process is still current, increase its idle time and finish time
