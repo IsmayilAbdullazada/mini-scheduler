@@ -116,14 +116,14 @@ void schedule_processes(scheduler* s, int N) {
     // Process running queue first, remove finished processes
     int index_rq = 0;
     while (index_rq < get_size(s->running_queue)) {
-      workload_item *process = get_heap(s->running_queue)[index_rq++];
-      if (!is_possible_process(timestep, process)) {
+      workload_item *running_process = get_heap(s->running_queue)[index_rq++];
+      if (!is_possible_process(timestep, running_process)) {
         // If a process has finished, write to the trace and remove it from the running queue
-        fprintf(trace_file, "process pid=%d prio=%d ('%s') finished after time t=%d\n", get_pid(process), get_priority(process), get_cmd(process), timestep-1);
-        delete(s->running_queue, process, timestep);
+        fprintf(trace_file, "process pid=%d prio=%d ('%s') finished after time t=%d\n", get_pid(running_process), get_priority(running_process), get_cmd(running_process), timestep-1);
+        delete(s->running_queue, running_process, timestep);
         // Update CPU occupation
-        s->cpu_occupation -= get_priority(process);
-        fprintf(trace_file, "CPU occupation: CPU[0]=%d\n", sum_priorities(s->running_queue));
+        s->cpu_occupation -= get_priority(running_process);
+        fprintf(trace_file, "CPU occupation: CPU[0]=%d\n", s->cpu_occupation);
         // Restart the loop to handle any additional finished processes
         index_rq = 0;
       }
@@ -137,33 +137,33 @@ void schedule_processes(scheduler* s, int N) {
       int pq_changed = false;
 
       // Check if the process can execute and its priority is within CPU capacity
-      if (is_current_process(timestep, process) && get_priority(process) <= s->cpu_capacity) {
+      if (is_current_process(timestep, pending_process) && get_priority(pending_process) <= s->cpu_capacity) {
         // Ensure that the total priority of running processes does not exceed the CPU capacity
-        while ((sum_priorities(s->running_queue) + get_priority(process)) > s->cpu_capacity) {
+        while ((min_running_process + get_priority(pending_process)) > s->cpu_capacity) {
           workload_item *min_running_process = get_min(s->running_queue);
-          if (get_priority(process) <= get_priority(min_process)){
+          if (get_priority(pending_process) <= get_priority(min_running_process)){
             // If the process cannot fit due to priority, write to the trace and skip scheduling it
-            fprintf(trace_file, "schedule pid=%d prio=%d ('%s') ... can't fit. Pick process to put asleep: None, as min prio: pid=%d prio=%d ('%s') has greater priority\n", get_pid(process), get_priority(process), get_cmd(process), get_pid(min_process), get_priority(min_process), get_cmd(min_process));
-            fprintf(trace_file, "CPU occupation: CPU[0]=%d\n", sum_priorities(s->running_queue));
+            fprintf(trace_file, "schedule pid=%d prio=%d ('%s') ... can't fit. Pick process to put asleep: None, as min prio: pid=%d prio=%d ('%s') has greater priority\n", get_pid(pending_process), get_priority(pending_process), get_cmd(pending_process), get_pid(min_running_process), get_priority(min_running_process), get_cmd(min_running_process));
+            fprintf(trace_file, "CPU occupation: CPU[0]=%d\n", min_running_process);
             break;
           }
           // If another process with lower priority can be put to sleep, deschedule it
-          fprintf(trace_file, "schedule pid=%d prio=%d ('%s') ... can't fit. Pick process to put asleep: pid=%d prio=%d ('%s')\n", get_pid(process), get_priority(process), get_cmd(process), get_pid(min_process), get_priority(min_process), get_cmd(min_process));
-          deschedule(s, min_process, timestep);
-          is_pq_change = 1;
-          fprintf(trace_file, "CPU occupation: CPU[0]=%d\n", sum_priorities(s->running_queue));
+          fprintf(trace_file, "schedule pid=%d prio=%d ('%s') ... can't fit. Pick process to put asleep: pid=%d prio=%d ('%s')\n", get_pid(pending_process), get_priority(pending_process), get_cmd(pending_process), get_pid(min_running_process), get_priority(min_running_process), get_cmd(min_running_process));
+          deschedule(s, min_running_process, timestep);
+          pq_changed = true;
+          fprintf(trace_file, "CPU occupation: CPU[0]=%d\n", min_running_process);
         }
         // If the process can fit, schedule it and update the trace
-        if (s->cpu_occupation + get_priority(process) <= s->cpu_capacity) {
-          schedule(s, process, timestep);
+        if (s->cpu_occupation + get_priority(pending_process) <= s->cpu_capacity) {
+          schedule(s, pending_process, timestep);
           in_pq = false;
-          fprintf(trace_file, "schedule pid=%d prio=%d ('%s') ... added to running queue\n", get_pid(process), get_priority(process), get_cmd(process));
-          fprintf(trace_file, "CPU occupation: CPU[0]=%d\n", sum_priorities(s->running_queue));
+          fprintf(trace_file, "schedule pid=%d prio=%d ('%s') ... added to running queue\n", get_pid(pending_process), get_priority(pending_process), get_cmd(pending_process));
+          fprintf(trace_file, "CPU occupation: CPU[0]=%d\n", min_running_process);
           pq_changed = true;
         }
         // If the process is still current, increase its idle time and finish time
-        if (is_current_process(timestep, process) && in_pq)
-          increase_idle_tf(process);
+        if (is_current_process(timestep, pending_process) && in_pq)
+          increase_idle_tf(pending_process);
       }
       // Restart the loop if the priority queue has been changed
       if (pq_changed) index_pq = 0;
