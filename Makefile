@@ -40,4 +40,4 @@ test_priority_queue_valgrind: test_priority_queue
 	valgrind --leak-check=full --show-leak-kinds=all ./test_priority_queue
 
 clean:
-	rm -f *.o workload test_workload sched test_priority_queue trace.txt
+	rm -f *.o *.exe workload test_workload sched test_priority_queue trace.txt
