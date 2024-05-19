@@ -139,7 +139,7 @@ void schedule_processes(scheduler* s, int N) {
       // Check if the process can execute and its priority is within CPU capacity
       if (is_current_process(timestep, pending_process) && get_priority(pending_process) <= s->cpu_capacity) {
         // Ensure that the total priority of running processes does not exceed the CPU capacity
-        while ((min_running_process + get_priority(pending_process)) > s->cpu_capacity) {
+        while ((s->cpu_occupation + get_priority(pending_process)) > s->cpu_capacity) {
           workload_item *min_running_process = get_min(s->running_queue);
           if (get_priority(pending_process) <= get_priority(min_running_process)){
             // If the process cannot fit due to priority, write to the trace and skip scheduling it
