@@ -121,7 +121,6 @@ workload_item* create_workload_item(int pid, int ppid, size_t ts, size_t tf, siz
     }
 
     strncpy(item->cmd, cmd, MAX_CMD_LEN);
-    free(item->cmd);
     
     item->prio = prio;
 
