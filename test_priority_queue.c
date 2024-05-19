@@ -3,7 +3,7 @@
 #include <string.h>
 #include <assert.h>
 #include "workload.h"
-#include "priority_queue.h"
+#include "scheduler_priority_queue.h"
 
 workload_item* create_test_workload_item(int pid, int ppid, size_t ts, size_t tf, size_t idle, char* cmd, int prio) {
     workload_item *item = create_workload_item(pid, ppid, ts, tf, idle, cmd, prio);

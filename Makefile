@@ -9,8 +9,8 @@ scheduler.o: scheduler.c scheduler.h
 workload.o: workload.c workload.h
 	$(CC) -c workload.c
 
-priority_queue.o: priority_queue.c priority_queue.h
-	$(CC) -c priority_queue.c
+priority_queue.o: scheduler_priority_queue.c scheduler_priority_queue.h
+	$(CC) -c scheduler_priority_queue.c
 
 test_workload.o: test_workload.c workload.h
 	$(CC) -c test_workload.c
@@ -18,11 +18,11 @@ test_workload.o: test_workload.c workload.h
 test_workload: test_workload.o workload.o
 	$(CC) -o test_workload test_workload.o workload.o
 
-main.o: main.c workload.h priority_queue.h scheduler.h
+main.o: main.c workload.h scheduler_priority_queue.h scheduler.h
 	$(CC) -c main.c
 
-main: main.o workload.o priority_queue.o scheduler.o
-	$(CC) -o sched main.o workload.o priority_queue.o scheduler.o
+main: main.o workload.o scheduler_priority_queue.o scheduler.o
+	$(CC) -o sched main.o workload.o scheduler_priority_queue.o scheduler.o
 
 main_valgrind: main
 	valgrind --leak-check=full --show-leak-kinds=all ./sched
@@ -30,11 +30,11 @@ main_valgrind: main
 test_workload_valgrind: test_workload
 	valgrind --leak-check=full --show-leak-kinds=all ./test_workload
 
-test_priority_queue.o: test_priority_queue.c priority_queue.h workload.h
+test_priority_queue.o: test_priority_queue.c scheduler_priority_queue.h workload.h
 	$(CC) -c test_priority_queue.c
 
-test_priority_queue: test_priority_queue.o workload.o priority_queue.o
-	$(CC) -o test_priority_queue test_priority_queue.o workload.o priority_queue.o
+test_priority_queue: test_priority_queue.o workload.o scheduler_priority_queue.o
+	$(CC) -o test_priority_queue test_priority_queue.o workload.o scheduler_priority_queue.o
 
 test_priority_queue_valgrind: test_priority_queue
 	valgrind --leak-check=full --show-leak-kinds=all ./test_priority_queue

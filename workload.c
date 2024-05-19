@@ -4,13 +4,13 @@
 #include "workload.h"
 
 struct workload_item_t {
-    int pid;
-    int ppid;
-    size_t ts;
-    size_t tf;
-    size_t idle;
-    char* cmd;
-    int prio;
+    int pid;      /** Process ID */
+    int ppid;     /** Parent process ID */
+    size_t ts;    /** Start time */
+    size_t tf;    /** Finish time */
+    size_t idle;  /** Idle time */
+    char* cmd;    /** Command */
+    int prio;     /** Priority */
 };
 
 int get_priority(const workload_item *item) {
@@ -71,9 +71,10 @@ int get_workload_items(char* filename, workload_item* items[MAX_ITEMS], size_t m
             fclose(file);
             return -1;
         }
-        items[i]->cmd = malloc(MAX_CMD_LEN * sizeof(char)); // allocate memory for cmd
+        items[i]->cmd = malloc(MAX_CMD_LEN * sizeof(char));
     }
 
+    // To track number of items added
     int i = 0;
 
     while (!feof(file)) {
@@ -83,6 +84,7 @@ int get_workload_items(char* filename, workload_item* items[MAX_ITEMS], size_t m
             return i;
         }
 
+        // Read all fields from file in order and assign to elements of items
         int result = fscanf(file, "%d %d %zu %zu %zu %s %d\n", &items[i]->pid, &items[i]->ppid, &items[i]->ts, &items[i]->tf, &items[i]->idle, items[i]->cmd, &items[i]->prio);
         if (result == 7) { // all fields were successfully read
             i++;
@@ -94,7 +96,7 @@ int get_workload_items(char* filename, workload_item* items[MAX_ITEMS], size_t m
     }
 
     fclose(file);
-    return i; // return the number of items added to the array
+    return i;
 }
 
 workload_item* create_workload_item(int pid, int ppid, size_t ts, size_t tf, size_t idle, char* cmd, int prio) {
@@ -104,6 +106,7 @@ workload_item* create_workload_item(int pid, int ppid, size_t ts, size_t tf, siz
         return NULL;
     }
 
+    // Take every value from input and assign to item
     item->pid = pid;
     item->ppid = ppid;
     item->ts = ts;
@@ -126,6 +129,7 @@ workload_item* create_workload_item(int pid, int ppid, size_t ts, size_t tf, siz
 }
 
 int is_equal_workload_item(workload_item* item1, workload_item* item2) {
+    // Compare every value of attribute one by one
     if (item1->pid != item2->pid) {
         return 0;
     }
