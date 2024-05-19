@@ -4,7 +4,8 @@
 
 void test_get_workload_items(void) {
     workload_item** expected_workloads;
-    expected_workloads = malloc(10 * sizeof(workload_item*));
+    int expected_num_items = 10;
+    expected_workloads = malloc(expected_num_items * sizeof(workload_item*));
 
     // 0 -1    0 18  0 init  10 
     // 1  0    1 16  0 bash   1 
@@ -16,7 +17,6 @@ void test_get_workload_items(void) {
     // 7  6   11 13  0 crypt  5 
     // 8  2   14 16  0 snake  4 
     // 9  1   14 15  0 cat    5
-
     expected_workloads[0] = create_workload_item(0, -1, 0, 18, 0, "init", 10);
     expected_workloads[1] = create_workload_item(1, 0, 1, 16, 0, "bash", 1);
     expected_workloads[2] = create_workload_item(2, 0, 3, 16, 0, "bash", 1);
@@ -28,23 +28,23 @@ void test_get_workload_items(void) {
     expected_workloads[8] = create_workload_item(8, 2, 14, 16, 0, "snake", 4);
     expected_workloads[9] = create_workload_item(9, 1, 14, 15, 0, "cat", 5);
 
-    int const max_items = 20;
-    workload_item** actual_workload = malloc(20 * sizeof(workload_item*));
-    int num_items = get_workload_items("workload_input.txt", actual_workload, max_items);
+    workload_item** actual_workload = malloc(MAX_ITEMS * sizeof(workload_item*));
+    int num_items = get_workload_items("workload_input.txt", actual_workload, MAX_ITEMS);
 
-    assert (num_items == 10);
+    assert (num_items == expected_num_items);
 
     for (int i = 0; i < num_items; i++) {
         assert (is_equal_workload_item(expected_workloads[i], actual_workload[i]));
     }
+    printf("File has been read correctly from the input\n");
 
 
-    for (int i = 0; i < max_items; i++) {
+    for (int i = 0; i < MAX_ITEMS; i++) {
         free_workload_item(actual_workload[i]);
     }
     free(actual_workload);
 
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < expected_num_items; i++) {
         free_workload_item(expected_workloads[i]);
     }
     free(expected_workloads);
@@ -52,5 +52,6 @@ void test_get_workload_items(void) {
 
 int main(void) {
     test_get_workload_items();
+    printf("Test succesfully completed\n");
     return 0;
 }
