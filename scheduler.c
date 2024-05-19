@@ -58,16 +58,16 @@ int sum_priorities(priority_queue *pq) {
   return sum;
 }
 
-void schedule(scheduler *s, workload_item *process) {
+void schedule(scheduler *s, workload_item *process, int current_time) {
   if (process == NULL) return;
-  insert(s->running_queue, process);
-  delete(s->pending_queue, process);
+  insert(s->running_queue, process, current_time);
+  delete(s->pending_queue, process, current_time);
 }
 
-void deschedule(scheduler* s, workload_item *process) {
+void deschedule(scheduler* s, workload_item *process, int current_time) {
   if (process == NULL) return;
-  insert(s->pending_queue, process);
-  delete(s->running_queue, process);
+  insert(s->pending_queue, process, current_time);
+  delete(s->running_queue, process, current_time);
 }
 
 void schedule_processes(scheduler* s, int N) {
@@ -85,7 +85,7 @@ void schedule_processes(scheduler* s, int N) {
       workload_item *process = get_heap(s->running_queue)[index_rq++];
       if (!is_possible_process(timestep, process)) {
         fprintf(trace_file, "process pid=%d prio=%d ('%s') finished after time t=%d\n", get_pid(process), get_priority(process), get_cmd(process), timestep-1);
-        delete(s->running_queue, process);
+        delete(s->running_queue, process, timestep);
         fprintf(trace_file, "CPU occupation: CPU[0]=%d\n", sum_priorities(s->running_queue));
         index_rq = 0;
       }
@@ -107,12 +107,12 @@ void schedule_processes(scheduler* s, int N) {
             break;
           }
           fprintf(trace_file, "schedule pid=%d prio=%d ('%s') ... can't fit. Pick process to put asleep: pid=%d prio=%d ('%s')\n", get_pid(process), get_priority(process), get_cmd(process), get_pid(min_process), get_priority(min_process), get_cmd(min_process));
-          deschedule(s, min_process);
+          deschedule(s, min_process, timestep);
           is_pq_change = 1;
           fprintf(trace_file, "CPU occupation: CPU[0]=%d\n", sum_priorities(s->running_queue));
         }
         if (sum_priorities(s->running_queue) + get_priority(process) <= 20) {
-          schedule(s, process);
+          schedule(s, process, timestep);
           is_in_pq = 0;
           fprintf(trace_file, "schedule pid=%d prio=%d ('%s') ... added to running queue\n", get_pid(process), get_priority(process), get_cmd(process));
           fprintf(trace_file, "CPU occupation: CPU[0]=%d\n", sum_priorities(s->running_queue));

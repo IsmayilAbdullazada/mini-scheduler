@@ -25,41 +25,51 @@ priority_queue* init_priority_queue(size_t capacity) {
     return pq;
 }
 
-void heapify_down(priority_queue *pq, size_t index) {
+void heapify_down(priority_queue *pq, size_t index, int current_time) {
     size_t left_child = 2 * index + 1;
     size_t right_child = 2 * index + 2;
     size_t largest = index;
 
-    if (left_child < pq->size && is_higher_priority(pq->heap[left_child], pq->heap[largest])) {
+    if (left_child < pq->size && is_higher_priority(pq->heap[left_child], pq->heap[largest], current_time)) {
         largest = left_child;
     }
 
-    if (right_child < pq->size && is_higher_priority(pq->heap[right_child], pq->heap[largest])) {
+    if (right_child < pq->size && is_higher_priority(pq->heap[right_child], pq->heap[largest], current_time)) {
         largest = right_child;
     }
 
     if (largest != index) {
         swap(&pq->heap[index], &pq->heap[largest]);
-        heapify_down(pq, largest);
+        heapify_down(pq, largest, current_time);
     }
 }
 
-void heapify_up(priority_queue *pq, size_t index) {
+void heapify_up(priority_queue *pq, size_t index, int current_time) {
     if (index == 0) {
         return;
     }
 
     size_t parent = (index - 1) / 2;
-    if (is_higher_priority(pq->heap[index], pq->heap[parent])) {
+    if (is_higher_priority(pq->heap[index], pq->heap[parent], current_time)) {
         swap(&pq->heap[parent], &pq->heap[index]);
-        heapify_up(pq, parent);
+        heapify_up(pq, parent, current_time);
     }
 }
+int static is_current_process(int cuurent_time, workload_item *process) {
+    return (get_ts(process) <= cuurent_time && cuurent_time <= get_tf(process));
+}
 
-int is_higher_priority(workload_item* a, workload_item* b) {
-    if (get_ts(a) <= get_ts(b) || (get_ts(a) == get_ts(b) && get_priority(a) >= get_priority(b))) {
-        return 1;
+int is_higher_priority(workload_item* a, workload_item* b, int current_time) {
+    // if scheduling has not started look just at ts and priority
+    if (is_current_process(current_time, a) && is_current_process(current_time, b)) {
+        return  get_priority(a) >= get_priority(b);
+
+    } else {
+       if (get_ts(a) <= get_ts(b) || (get_ts(a) == get_ts(b) && get_priority(a) >= get_priority(b))) {
+            return 1;
+        }
     }
+
     return 0;
 }
 
@@ -71,12 +81,12 @@ priority_queue* build_priority_queue(workload_item **workloads, size_t num_event
 	}
 	pq->size = i;
 	for (i = (pq->size - 1) / 2; i>=0; i--) {
-		heapify_down(pq, i);
+		heapify_down(pq, i, -1);
 	}
 	return pq;
 }
 
-void insert(priority_queue *pq, workload_item *process) {
+void insert(priority_queue *pq, workload_item *process, int current_time) {
     if (pq->size == pq->capacity) {
         printf("Priority queue is full!\n");
         return;
@@ -84,10 +94,10 @@ void insert(priority_queue *pq, workload_item *process) {
 
     pq->heap[pq->size] = process;
     pq->size++;
-    heapify_up(pq, pq->size - 1);
+    heapify_up(pq, pq->size - 1, current_time);
 }
 
-void delete(priority_queue *pq, workload_item *process) {
+void delete(priority_queue *pq, workload_item *process, int current_time) {
   size_t index;
   for (index = 0; index < pq->size; index++) {
     if (get_pid(pq->heap[index]) == get_pid(process))
@@ -95,10 +105,10 @@ void delete(priority_queue *pq, workload_item *process) {
   }
   pq->heap[index] = pq->heap[pq->size - 1];
   pq->size--;
-  heapify_down(pq, index);
+  heapify_down(pq, index, current_time);
 }
 
-workload_item* extract_max(priority_queue *pq) {
+workload_item* extract_max(priority_queue *pq, int current_time) {
     if (pq->size == 0) {
         printf("Priority queue is empty!\n");
         workload_item *null_process = create_workload_item(-1, -1, 0, 0, 0, NULL, -1); // {-1, -1, 0, 0, 0, NULL, -1}; // Return null process
@@ -108,7 +118,7 @@ workload_item* extract_max(priority_queue *pq) {
     workload_item *max_process = pq->heap[0];
     pq->heap[0] = pq->heap[pq->size - 1];
     pq->size--;
-    heapify_down(pq, 0);
+    heapify_down(pq, 0, current_time);
     return max_process;
 }
 

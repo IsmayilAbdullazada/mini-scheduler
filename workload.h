@@ -13,7 +13,7 @@ int is_equal_workload_item(workload_item* item1, workload_item* item2);
 
 void free_workload_item(workload_item *item);
 
-int is_higher_priority(workload_item* a, workload_item* b);
+
 
 int get_priority(const workload_item *item);
 void set_priority(workload_item *item, int prio);
